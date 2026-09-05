@@ -45,4 +45,8 @@ jobs:
         # Här mappar vi dina GitHub Secrets till namnen Python letar efter
         LOGIN_USERNAME: ${{ secrets.LOGIN_USERNAME }}
         LOGIN_PASSWORD: ${{ secrets.LOGIN_PASSWORD }}
+        # E-postnotiser vid schemaändringar (tidsbyte/borttaget pass)
+        SMTP_USER: ${{ secrets.SMTP_USER }}
+        SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+        NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
       run: python main.py
