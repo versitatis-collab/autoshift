@@ -11,14 +11,21 @@ BOOKING_WINDOW_DAYS = int(environ.get("BOOKING_WINDOW_DAYS", "75"))
 
 
 def filter_by_window(df, window_days):
-    """Keep only shifts starting within [now, now + window_days]."""
+    """Keep only shifts starting within [start of today, now + window_days].
+
+    Uses the start of *today* (not the current instant) as the lower bound so a
+    shift scheduled for today isn't dropped from the window (and then wrongly
+    reported as "removed" during sync) just because its start time has already
+    passed while the shift itself is still valid/ongoing.
+    """
     if df.empty:
         return df
     now = datetime.now().astimezone()
+    start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     horizon = now + timedelta(days=window_days)
     df = df.copy()
     df["_start_dt"] = df["starttime"].apply(lambda s: datetime.fromisoformat(s))
-    filtered = df[(df["_start_dt"] >= now) & (df["_start_dt"] <= horizon)]
+    filtered = df[(df["_start_dt"] >= start_of_today) & (df["_start_dt"] <= horizon)]
     return filtered.drop(columns=["_start_dt"])
 
 

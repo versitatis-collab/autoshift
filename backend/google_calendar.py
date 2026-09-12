@@ -79,7 +79,15 @@ class google_calendar():
         events_by_key = {}
         page_token = None
 
-        time_min = datetime.now(timezone.utc).isoformat()
+        # Anchor the lower bound to the start of "today" (local time), not the current
+        # instant. Otherwise, once a shift's start time passes today, timeMin=now would
+        # still include it (it hasn't ended yet) here, but filter_by_window's schedule
+        # side used to drop it -- causing it to look "removed" mid-shift. Aligning both
+        # windows on start-of-day keeps them consistent.
+        start_of_today_local = datetime.now().astimezone().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        time_min = start_of_today_local.astimezone(timezone.utc).isoformat()
         time_max = (datetime.now(timezone.utc) + timedelta(days=CALENDAR_SYNC_DAYS)).isoformat()
 
         while True:
