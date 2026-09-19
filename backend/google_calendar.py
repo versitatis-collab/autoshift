@@ -19,6 +19,28 @@ def _shift_date(iso_dt):
     return datetime.fromisoformat(iso_dt).date().isoformat()
 
 
+def _normalize_endtime_for_overnight(starttime: str, endtime: str) -> str:
+    """Ensure endtime is after starttime; if not, treat as overnight and add one day.
+
+    This keeps the existing architecture intact while allowing shifts that visually
+    appear as starting one day and ending after midnight the next day to be synced
+    as a single continuous event in Google Calendar.
+    """
+    try:
+        start_dt = datetime.fromisoformat(starttime)
+        end_dt = datetime.fromisoformat(endtime)
+    except ValueError:
+        # If parsing fails, fall back to original endtime so behavior remains unchanged.
+        return endtime
+
+    if end_dt <= start_dt:
+        # Assume the shift passes midnight; bump end by one day.
+        end_dt = end_dt + timedelta(days=1)
+        return end_dt.isoformat()
+
+    return endtime
+
+
 class google_calendar():
     def __init__(self):
         self.token_path = 'token.json'
@@ -45,6 +67,8 @@ class google_calendar():
         pass
 
     def add_event(self, start, end, title, status):
+        # Normalize endtime so overnight shifts always have a valid range
+        end = _normalize_endtime_for_overnight(start, end)
         event = {
             'summary': title,
             'start': {'dateTime': start, 'timeZone': 'Europe/Stockholm'},
@@ -62,6 +86,8 @@ class google_calendar():
 
     def update_event(self, event_id, start, end, title):
         """Update an existing event's time/title in place (keeps the same event_id)."""
+        # Normalize endtime so overnight shifts always have a valid range
+        end = _normalize_endtime_for_overnight(start, end)
         event = {
             'summary': title,
             'start': {'dateTime': start, 'timeZone': 'Europe/Stockholm'},
