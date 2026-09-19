@@ -7,7 +7,7 @@ schedule change without noticing.
 import os
 import smtplib
 from email.mime.text import MIMEText
-from datetime import datetime
+from datetime import datetime, timedelta
 
 SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
@@ -68,7 +68,14 @@ def notify_changes(changes):
     Send an email if there are any changes worth flagging.
     Only sends for 'modified' and 'deleted' by default (the surprising ones);
     set NOTIFY_ON_ADD=true to also get emailed for brand-new shifts.
+
+    Only considers changes for shifts dated tomorrow or later -- today's
+    shift is already locked in/in progress, so a same-day change isn't
+    something worth an email alert for.
     """
+    tomorrow = datetime.now().astimezone().date() + timedelta(days=1)
+    changes = [c for c in changes if datetime.fromisoformat(c["date"]).date() >= tomorrow]
+
     notify_on_add = os.environ.get("NOTIFY_ON_ADD", "false").lower() == "true"
 
     relevant = [c for c in changes if c["type"] in ("modified", "deleted")]
@@ -76,7 +83,7 @@ def notify_changes(changes):
         relevant += [c for c in changes if c["type"] == "added"]
 
     if not relevant:
-        print("No notable shift changes -- skipping email.")
+        print("No notable shift changes from tomorrow onward -- skipping email.")
         return False
 
     if not SMTP_USER or not SMTP_PASSWORD:
