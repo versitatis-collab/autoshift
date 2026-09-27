@@ -163,7 +163,13 @@ class google_calendar():
             if row['status'] != 'Aktiv':
                 continue
 
-            starttime, endtime, function = row['starttime'], row['endtime'], row['function']
+            starttime, function = row['starttime'], row['function']
+            # Normalize endtime the same way add_event/update_event do before writing to
+            # the calendar. Without this, an overnight shift's raw scraped endtime (e.g.
+            # 16th before midnight) never matches the calendar's stored, already-bumped
+            # endtime (17th) -- so every sync run sees a "difference" and re-fires a
+            # modified/update, even though nothing about the shift actually changed.
+            endtime = _normalize_endtime_for_overnight(starttime, row['endtime'])
             key = (_shift_date(starttime), function)
             seen_keys.add(key)
 
